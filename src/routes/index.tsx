@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Eye, AlertTriangle, Map, Instagram, Music2, ArrowRight } from "lucide-react";
-import { generateAuditReport } from './api/audit'
+import { generateAuditReport } from './api/-audit'
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -375,7 +375,7 @@ const [step, setStep] = useState(1);
     setError(null);
     try {
       const score = calcScore();
-      const result = await generateAuditReport({ data: { ...formData, score } });
+      const result = await generateAuditReport({ data: { ...formData, score } as any })
       if (result?.error) {
         setError('Błąd generowania raportu. Spróbuj ponownie.');
       } else {
@@ -474,21 +474,22 @@ const [step, setStep] = useState(1);
         <div className="rounded-2xl border border-accent/30 bg-accent/8 p-8">
           <p className="text-white/80 leading-relaxed mb-6">{report.cta}</p>
           <div className="flex flex-col sm:flex-row gap-3">
-            
-              href="https://calendly.com/biesiadastudio"
+            <a
+             href="https://calendly.com/biesiadastudio"
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 rounded-xl bg-accent px-6 py-3 text-center text-sm font-semibold text-bg-dark transition-all hover:bg-accent/90 hover:scale-[1.02]"
             >
-              Umów rozmowę →
+              Umów rozmowę {'>'}
             </a>
             
+            <a
               href="mailto:kontakt@biesiadastudio.pl"
               className="flex-1 rounded-xl border border-accent/40 px-6 py-3 text-center text-sm font-semibold text-accent transition-all hover:bg-accent/10"
             >
               Napisz email
             </a>
-            
+            <a
               href="https://wa.me/48TWOJNUMER"
               target="_blank"
               rel="noopener noreferrer"
