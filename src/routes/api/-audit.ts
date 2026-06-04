@@ -80,7 +80,7 @@ Napisz raport w formacie JSON (tylko JSON, bez markdown, bez backticks):
 
     const result = await response.json()
     const text = result.content?.[0]?.text || ''
-    const clean = text.replace(/```json|```/g, '').trim()
+    const clean = text.replace(/```json\n?|```/g, '').trim()
     
     try {
       return JSON.parse(clean)
