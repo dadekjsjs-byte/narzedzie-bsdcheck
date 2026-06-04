@@ -73,14 +73,15 @@ Napisz raport w formacie JSON (tylko JSON, bez markdown, bez backticks):
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5',
-        max_tokens: 1000,
+        max_tokens: 2000,
         messages: [{ role: 'user', content: prompt }]
       })
     })
 
     const result = await response.json()
     const text = result.content?.[0]?.text || ''
-    const clean = text.replace(/```json\n?|```/g, '').trim()
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
+const clean = jsonMatch ? jsonMatch[0] : text
     
     try {
       return JSON.parse(clean)
