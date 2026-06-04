@@ -1,8 +1,4 @@
 import { createServerFn } from '@tanstack/react-start'
-import { Resend } from 'resend'
-
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 
 export const generateAuditReport = createServerFn({ method: 'POST' })
   .handler(async (ctx) => {
@@ -91,16 +87,12 @@ Odpowiedz WYŁĄCZNIE czystym JSON bez żadnego markdown, bez backticks, bez tek
 
     const result = await response.json()
     const text = result.content?.[0]?.text || ''
-  const stripped = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim()
-const jsonMatch = stripped.match(/\{[\s\S]*\}/)
-const clean = jsonMatch ? jsonMatch[0] : stripped
-    
- try {
-      const report = JSON.parse(clean)
-// Zapisz do Google Sheets
+    const stripped = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim()
+    const jsonMatch = stripped.match(/\{[\s\S]*\}/)
+    const clean = jsonMatch ? jsonMatch[0] : stripped
 
-
-      return report
+    try {
+      return JSON.parse(clean)
     } catch {
       return { error: 'Parse error', raw: text }
     }
