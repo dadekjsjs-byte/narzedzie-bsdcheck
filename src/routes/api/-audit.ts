@@ -127,7 +127,7 @@ const clean = jsonMatch ? jsonMatch[0] : stripped
         })
         const tokenData = await tokenRes.json() as { access_token: string }
 
-        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A:F:append?valueInputOption=RAW`, {
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1%21A%3AF:append?valueInputOption=RAW`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${tokenData.access_token}`,
