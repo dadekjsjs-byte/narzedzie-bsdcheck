@@ -137,8 +137,8 @@ const clean = jsonMatch ? jsonMatch[0] : stripped
             values: [[now, data.email, data.nazwa, data.score, data.platformy?.join(', ') || '', data.zrodloKlientow || '']]
           })
         })
-      } catch (sheetsError) {
-        console.error('Sheets error:', sheetsError)
+} catch (sheetsError: any) {
+        return { error: 'Sheets error', details: sheetsError?.message || String(sheetsError) }
       }
       // Wysyłka emaila z raportem
       try {
