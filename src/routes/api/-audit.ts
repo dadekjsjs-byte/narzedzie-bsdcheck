@@ -53,6 +53,10 @@ ZASADY TONU:
 - NIE mów że wszystko jest świetne jeśli wynik jest niski — bądź szczery przez pryzmat możliwości
 - Personalizuj pod branżę i konkretne odpowiedzi firmy
 - Pisz płynnym tekstem, bez bullet pointów
+- Klucz w JSON musi być dokładnie "co_traci_klientow" — nie "co_traca_klientow" ani żadna inna wersja
+- Pisz prostą, poprawną polszczyzną — unikaj angielskich wtrętów jak "habit", "scheduling", "content" — zamiast tego użyj "nawyk", "planowanie", "treści"
+- Zdania mają być logicznie ułożone i zrozumiałe dla właściciela małej firmy bez wiedzy marketingowej
+- Unikaj skomplikowanych konstrukcji zdaniowych — krótko i na temat
 
 WAŻNE — FORMAT JSON:
 Odpowiedz WYŁĄCZNIE czystym JSON bez żadnego markdown, bez backticks, bez tekstu przed ani po. Zacznij odpowiedź od { i zakończ na }.
@@ -61,7 +65,7 @@ Odpowiedz WYŁĄCZNIE czystym JSON bez żadnego markdown, bez backticks, bez tek
   "wynik": ${data.score},
   "werdykt": "jedno zdanie podsumowujące sytuację firmy z perspektywy możliwości",
   "co_robisz_dobrze": "2-3 zdania o konkretnych mocnych stronach firmy",
-  "co_traci_klientow": "OBOWIĄZKOWO 3-5 akapitów oddzielonych \\n\\n. Każdy akapit to osobny konkretny obszar gdzie firma traci potencjalnych klientów. Pisz o każdym problemie jako o szansie do wykorzystania.",
+  "co_traci_klientow": "OBOWIĄZKOWO napisz dokładnie 3-5 akapitów oddzielonych \\n\\n. Użyj dokładnie klucza co_traci_klientow. Każdy akapit to osobny konkretny obszar gdzie firma traci potencjalnych klientów — pisz o tym jako o szansie do wykorzystania.",
   "plan_dzialania": [
     {"nazwa": "nazwa kroku", "opis": "3-4 zdania co konkretnie zrobić i dlaczego to ważne"}
   ],
