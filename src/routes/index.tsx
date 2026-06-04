@@ -461,8 +461,8 @@ const [step, setStep] = useState(1);
                     {i + 1}
                   </div>
                   <div>
-                    <p className="font-semibold text-white mb-1">{krok.nazwa}</p>
-                    <p className="text-white/70 leading-relaxed text-sm">{krok.opis}</p>
+                    <p className="font-semibold text-white text-sm mb-1">{krok.nazwa}</p>
+                    <p className="text-white/70 leading-relaxed text-xs sm:text-sm">{krok.opis}</p>
                   </div>
                 </div>
               ))}
