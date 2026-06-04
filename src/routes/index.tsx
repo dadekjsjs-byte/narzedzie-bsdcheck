@@ -480,17 +480,17 @@ const [step, setStep] = useState(1);
               rel="noopener noreferrer"
               className="flex-1 rounded-xl bg-accent px-6 py-3 text-center text-sm font-semibold text-bg-dark transition-all hover:bg-accent/90 hover:scale-[1.02]"
             >
-              Umów rozmowę {'>'}
+              Umów rozmowę
             </a>
             
             <a
-              href="mailto:dawidbiesiadastudio@gmail.com"
+              href="#" onClick={(e) => { e.preventDefault(); alert('dawidbiesiadastudio@gmail.com'); }}
               className="flex-1 rounded-xl border border-accent/40 px-6 py-3 text-center text-sm font-semibold text-accent transition-all hover:bg-accent/10"
             >
               Napisz email
             </a>
             <a
-              href="https://wa.me/48TWOJNUMER"
+              href="https://wa.me/48531629503"
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 rounded-xl border border-white/10 px-6 py-3 text-center text-sm font-semibold text-white/70 transition-all hover:border-white/25 hover:text-white"
