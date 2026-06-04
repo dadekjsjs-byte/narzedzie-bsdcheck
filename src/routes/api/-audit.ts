@@ -84,8 +84,9 @@ Odpowiedz WYŁĄCZNIE czystym JSON bez żadnego markdown, bez backticks, bez tek
 
     const result = await response.json()
     const text = result.content?.[0]?.text || ''
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-const clean = jsonMatch ? jsonMatch[0] : text
+  const stripped = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim()
+const jsonMatch = stripped.match(/\{[\s\S]*\}/)
+const clean = jsonMatch ? jsonMatch[0] : stripped
     
     try {
       return JSON.parse(clean)
