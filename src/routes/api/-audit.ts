@@ -97,7 +97,49 @@ const clean = jsonMatch ? jsonMatch[0] : stripped
     
  try {
       const report = JSON.parse(clean)
+// Zapisz do Google Sheets
+      try {
+        const now = new Date().toISOString()
+        const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!
+        const key = process.env.GOOGLE_PRIVATE_KEY!.replace(/\\n/g, '\n')
+        const sheetId = process.env.GOOGLE_SHEETS_ID!
 
+        // JWT token
+        const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url')
+        const payload = Buffer.from(JSON.stringify({
+          iss: email,
+          scope: 'https://www.googleapis.com/auth/spreadsheets',
+          aud: 'https://oauth2.googleapis.com/token',
+          exp: Math.floor(Date.now() / 1000) + 3600,
+          iat: Math.floor(Date.now() / 1000)
+        })).toString('base64url')
+
+        const { createSign } = await import('crypto')
+        const sign = createSign('RSA-SHA256')
+        sign.update(`${header}.${payload}`)
+        const signature = sign.sign(key, 'base64url')
+        const jwt = `${header}.${payload}.${signature}`
+
+        const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+        })
+        const tokenData = await tokenRes.json() as { access_token: string }
+
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A:F:append?valueInputOption=RAW`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${tokenData.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            values: [[now, data.email, data.nazwa, data.score, data.platformy?.join(', ') || '', data.zrodloKlientow || '']]
+          })
+        })
+      } catch (sheetsError) {
+        console.error('Sheets error:', sheetsError)
+      }
       // Wysyłka emaila z raportem
       try {
         await resend.emails.send({
