@@ -101,7 +101,7 @@ const clean = jsonMatch ? jsonMatch[0] : stripped
       try {
         const now = new Date().toISOString()
         const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!
-        const key = process.env.GOOGLE_PRIVATE_KEY!.replace(/\\n/g, '\n')
+        const key = process.env.GOOGLE_PRIVATE_KEY!.replace(/\\n/g, '\n').replace(/\\\\n/g, '\n')
         const sheetId = process.env.GOOGLE_SHEETS_ID!
 
         // JWT token
@@ -115,7 +115,7 @@ const clean = jsonMatch ? jsonMatch[0] : stripped
         })).toString('base64url')
 
         const { createSign } = await import('crypto')
-        const sign = createSign('RSA-SHA256')
+        const sign = createSign('SHA256')
         sign.update(`${header}.${payload}`)
         const signature = sign.sign(key, 'base64url')
         const jwt = `${header}.${payload}.${signature}`
