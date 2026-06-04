@@ -98,76 +98,13 @@ const clean = jsonMatch ? jsonMatch[0] : stripped
  try {
       const report = JSON.parse(clean)
 // Zapisz do Google Sheets
+      // Zapisz email do pliku
       try {
-        const now = new Date().toISOString()
-        const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!
-        const key = process.env.GOOGLE_PRIVATE_KEY!.replace(/\\n/g, '\n').replace(/\\\\n/g, '\n')
-        const sheetId = process.env.GOOGLE_SHEETS_ID!
-
-        // JWT token
-        const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url')
-        const payload = Buffer.from(JSON.stringify({
-          iss: email,
-          scope: 'https://www.googleapis.com/auth/spreadsheets',
-          aud: 'https://oauth2.googleapis.com/token',
-          exp: Math.floor(Date.now() / 1000) + 3600,
-          iat: Math.floor(Date.now() / 1000)
-        })).toString('base64url')
-
-        const { createSign } = await import('crypto')
-        const sign = createSign('SHA256')
-        sign.update(`${header}.${payload}`)
-        const signature = sign.sign(key, 'base64url')
-        const jwt = `${header}.${payload}.${signature}`
-
-        const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
-        })
-        const tokenData = await tokenRes.json() as { access_token: string }
-
-        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1%21A%3AF:append?valueInputOption=RAW`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${tokenData.access_token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            values: [[now, data.email, data.nazwa, data.score, data.platformy?.join(', ') || '', data.zrodloKlientow || '']]
-          })
-        })
-} catch (sheetsError: any) {
-        return { error: 'Sheets error', details: sheetsError?.message || String(sheetsError) }
-      }
-      // Wysyłka emaila z raportem
-      try {
-        await resend.emails.send({
-          from: 'Biesiada Studio <audyt@bsdcheck.pl>',
-          to: data.email,
-          subject: `Twój raport obecności online — wynik ${data.score}/100`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-              <h1 style="color: #00D4B4;">Twój raport jest gotowy</h1>
-              <p style="font-size: 48px; font-weight: bold; color: ${data.score >= 70 ? '#00D4B4' : data.score >= 40 ? '#f59e0b' : '#ef4444'};">${data.score}/100</p>
-              <p style="font-size: 18px;">${report.werdykt}</p>
-              <h2 style="color: #00D4B4;">Co robisz dobrze</h2>
-              <p>${report.co_robisz_dobrze}</p>
-              <h2>Co traci dla ciebie klientów</h2>
-              <p>${(report.co_traci_klientow || '').replace(/\n\n/g, '<br><br>')}</p>
-              <h2>Plan działania</h2>
-              ${report.plan_dzialania?.map((k: any, i: number) => `
-                <p><strong>${i + 1}. ${k.nazwa}</strong><br>${k.opis}</p>
-              `).join('') || ''}
-              <div style="background: #0a1628; padding: 20px; border-radius: 12px; margin-top: 30px;">
-                <p style="color: #ffffff;">${report.cta}</p>
-                <a href="https://wa.me/48531629503" style="background: #00D4B4; color: #0a1628; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; margin-top: 10px;">Umów rozmowę</a>
-              </div>
-            </div>
-          `
-        })
-      } catch (emailError) {
-        console.error('Email send error:', emailError)
+        const { appendFile } = await import('fs/promises')
+        const line = `${new Date().toISOString()},${data.email},${data.nazwa},${data.score}\n`
+        await appendFile('/home/u694760561/domains/bsdcheck.pl/leads.csv', line, 'utf8')
+      } catch (fileError) {
+        console.error('File error:', fileError)
       }
 
       return report
