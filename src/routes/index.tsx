@@ -414,13 +414,13 @@ const [step, setStep] = useState(1);
     return (
       <div className="space-y-8 text-left">
         {/* Wynik */}
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-8">
           <p className="text-sm uppercase tracking-widest text-white/40 mb-4">Twój wynik</p>
           <div className="flex items-end gap-4 mb-4">
-            <span className="font-display font-bold text-7xl" style={{ color: scoreColor }}>{score}</span>
+            <span className="font-display font-bold text-5xl sm:text-7xl" style={{ color: scoreColor }}>{score}</span>
             <span className="text-white/40 text-2xl mb-3">/100</span>
           </div>
-          <p className="text-white/80 text-lg leading-relaxed">{report.werdykt}</p>
+          <p className="text-white/80 text-sm sm:text-lg leading-relaxed">{report.werdykt}</p>
           {/* Progress bar */}
           <div className="mt-6 h-2 rounded-full bg-white/10 overflow-hidden">
             <div
@@ -432,7 +432,7 @@ const [step, setStep] = useState(1);
 
         {/* Co robisz dobrze */}
         {report.co_robisz_dobrze && (
-          <div className="rounded-2xl border border-accent/20 bg-accent/5 p-8">
+          <div className="rounded-2xl border border-accent/20 bg-accent/5 p-5 sm:p-8">
             <p className="text-sm uppercase tracking-widest text-accent mb-3">Co robisz dobrze</p>
             <p className="text-white/80 leading-relaxed">{report.co_robisz_dobrze}</p>
           </div>
@@ -440,7 +440,7 @@ const [step, setStep] = useState(1);
 
         {/* Co traci klientów */}
         {(report.co_traci_klientow || report.co_traca_klientow) && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-8">"
             <p className="text-sm uppercase tracking-widest text-white/40 mb-3">Co traci dla ciebie klientów</p>
             <div className="space-y-4">
               {report.co_traci_klientow.split('\n\n').map((para: string, i: number) => (
@@ -452,7 +452,7 @@ const [step, setStep] = useState(1);
 
         {/* Plan działania */}
         {report.plan_dzialania?.length > 0 && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-8">
             <p className="text-sm uppercase tracking-widest text-white/40 mb-6">Plan działania</p>
             <div className="space-y-6">
               {report.plan_dzialania.map((krok: any, i: number) => (
@@ -471,21 +471,21 @@ const [step, setStep] = useState(1);
         )}
 
         {/* CTA */}
-        <div className="rounded-2xl border border-accent/30 bg-accent/8 p-8">
+        <div className="rounded-2xl border border-accent/30 bg-accent/8 p-5 sm:p-8">
           <p className="text-white/80 leading-relaxed mb-6">{report.cta}</p>
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col gap-3">
             <a
              href="https://wa.me/48531629503"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 rounded-xl bg-accent px-6 py-3 text-center text-sm font-semibold text-bg-dark transition-all hover:bg-accent/90 hover:scale-[1.02]"
+              className="w-full rounded-xl bg-accent px-6 py-3 text-center text-sm font-semibold text-bg-dark transition-all hover:bg-accent/90 hover:scale-[1.02]"
             >
               Umów rozmowę
             </a>
             
             <a
-              href="#" onClick={(e) => { e.preventDefault(); alert('dawidbiesiadastudio@gmail.com'); }}
-              className="flex-1 rounded-xl border border-accent/40 px-6 py-3 text-center text-sm font-semibold text-accent transition-all hover:bg-accent/10"
+              href="mailto:dawidbiesiadastudio@gmail.com"
+              className="w-full rounded-xl border border-accent/40 px-6 py-3 text-center text-sm font-semibold text-accent transition-all hover:bg-accent/10"
             >
               Napisz email
             </a>
@@ -493,7 +493,7 @@ const [step, setStep] = useState(1);
               href="https://wa.me/48531629503"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 rounded-xl border border-white/10 px-6 py-3 text-center text-sm font-semibold text-white/70 transition-all hover:border-white/25 hover:text-white"
+              className="w-full rounded-xl border border-white/10 px-6 py-3 text-center text-sm font-semibold text-white/70 transition-all hover:border-white/25 hover:text-white"
             >
               WhatsApp
             </a>
