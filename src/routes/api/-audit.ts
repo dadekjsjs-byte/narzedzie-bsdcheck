@@ -1,4 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
+import { Resend } from 'resend'
+
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 
 export const generateAuditReport = createServerFn({ method: 'POST' })
@@ -92,8 +95,44 @@ Odpowiedz WYŁĄCZNIE czystym JSON bez żadnego markdown, bez backticks, bez tek
 const jsonMatch = stripped.match(/\{[\s\S]*\}/)
 const clean = jsonMatch ? jsonMatch[0] : stripped
     
-    try {
-      return JSON.parse(clean)
+ try {
+      const report = JSON.parse(clean)
+      
+      // Wysyłka emaila z raportem
+      try {
+        await resend.emails.send({
+          from: 'Biesiada Studio <audyt@bsdcheck.pl>',
+          to: data.email,
+          subject: `Twój raport obecności online — wynik ${data.score}/100`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h1 style="color: #00D4B4;">Twój raport jest gotowy</h1>
+              <p style="font-size: 48px; font-weight: bold; color: ${data.score >= 70 ? '#00D4B4' : data.score >= 40 ? '#f59e0b' : '#ef4444'};">${data.score}/100</p>
+              <p style="font-size: 18px;">${report.werdykt}</p>
+              
+              <h2 style="color: #00D4B4;">Co robisz dobrze</h2>
+              <p>${report.co_robisz_dobrze}</p>
+              
+              <h2>Co traci dla ciebie klientów</h2>
+              <p>${(report.co_traci_klientow || '').replace(/\n\n/g, '<br><br>')}</p>
+              
+              <h2>Plan działania</h2>
+              ${report.plan_dzialania?.map((k: any, i: number) => `
+                <p><strong>${i + 1}. ${k.nazwa}</strong><br>${k.opis}</p>
+              `).join('') || ''}
+              
+              <div style="background: #0a1628; padding: 20px; border-radius: 12px; margin-top: 30px;">
+                <p style="color: #ffffff;">${report.cta}</p>
+                <a href="https://wa.me/48531629503" style="background: #00D4B4; color: #0a1628; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; margin-top: 10px;">Umów rozmowę</a>
+              </div>
+            </div>
+          `
+        })
+      } catch (emailError) {
+        console.error('Email send error:', emailError)
+      }
+      
+      return report
     } catch {
       return { error: 'Parse error', raw: text }
     }
