@@ -98,14 +98,7 @@ const clean = jsonMatch ? jsonMatch[0] : stripped
  try {
       const report = JSON.parse(clean)
 // Zapisz do Google Sheets
-      // Zapisz email do pliku
-      try {
-        const { appendFile } = await import('fs/promises')
-        const line = `${new Date().toISOString()},${data.email},${data.nazwa},${data.score}\n`
-        await appendFile('/tmp/leads.csv', line, 'utf8')
-      } catch (fileError) {
-        console.error('File error:', fileError)
-      }
+
 
       return report
     } catch {
