@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { Resend } from 'resend'
+import { google } from 'googleapis'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -97,7 +98,45 @@ const clean = jsonMatch ? jsonMatch[0] : stripped
     
  try {
       const report = JSON.parse(clean)
-      
+// Zapisz do Google Sheets
+      try {
+        const auth = new google.auth.GoogleAuth({
+          credentials: {
+            client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+          },
+          scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+        })
+        const sheets = google.sheets({ version: 'v4', auth })
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: process.env.GOOGLE_SHEETS_ID,
+          range: 'Sheet1!A:F',
+          valueInputOption: 'RAW',
+          requestBody: {
+            values: [[
+              new Date().toISOString(),
+              data.email,
+              data.nazwa,
+              data.score,
+              data.platformy?.join(', ') || '',
+              data.zrodloKlientow || ''
+            ]]
+          }
+        })
+      } catch (sheetsError) {
+        console.error('Sheets error:', sheetsError)
+      }
+      // Zapisz email do Resend Audience
+      try {
+        await resend.contacts.create({
+          email: data.email,
+          firstName: data.nazwa || '',
+          unsubscribed: false,
+          audienceId: process.env.RESEND_AUDIENCE_ID!
+        })
+      } catch (contactError) {
+        console.error('Contact save error:', contactError)
+      }
       // Wysyłka emaila z raportem
       try {
         await resend.emails.send({
