@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Eye, AlertTriangle, Map, Instagram, Music2, ArrowRight } from "lucide-react";
+import { generateAuditReport } from './api/audit'
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -316,39 +317,17 @@ function Stats() {
     </section>
   );
 }
-type FormData = {
-  nazwa: string;
-  platformy: string[];
-  czestotliwosc: string;
-  strona: string;
-  zdjecie: string;
-  zrodloKlientow: string;
-  problemOnline: string;
-  problemOnlineCustom: string;
-  celOnline: string;
-  celOnlineCustom: string;
-  opisKlienta: string;
-  email: string;
-};
-
 function AuditForm() {
-  const [step, setStep] = useState(1);
+const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [report, setReport] = useState<null | {
-    wynik: number;
-    werdykt: string;
-    co_robisz_dobrze: string;
-    co_traci_klientow: string;
-    plan_dzialania: { nazwa: string; opis: string }[];
-    cta: string;
-  }>(null);
+  const [report, setReport] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const [form, setForm] = useState<FormData>({
+  const [formData, setFormData] = useState({
     nazwa: '',
-    platformy: [],
+    platformy: [] as string[],
     czestotliwosc: '',
     strona: '',
-    zdjecie: '',
     zrodloKlientow: '',
     problemOnline: '',
     problemOnlineCustom: '',
@@ -359,371 +338,397 @@ function AuditForm() {
   });
 
   const totalSteps = 9;
+  const progress = Math.round((step / totalSteps) * 100);
 
-  const updateForm = (key: keyof FormData, value: string) => {
-    setForm(prev => ({ ...prev, [key]: value }));
-  };
-
-  const togglePlatform = (p: string) => {
-    setForm(prev => ({
-      ...prev,
-      platformy: prev.platformy.includes(p)
-        ? prev.platformy.filter(x => x !== p)
-        : [...prev.platformy, p],
-    }));
-  };
-
-  const calcScore = () => {
+  function calcScore(): number {
     let score = 0;
-    const p = form.platformy.length;
-    if (p === 0) score += 0;
-    else if (p === 1) score += 8;
-    else if (p === 2) score += 14;
-    else score += 20;
-
-    if (form.czestotliwosc === 'rzadko') score += 0;
-    else if (form.czestotliwosc === 'kilka_miesiac') score += 8;
-    else if (form.czestotliwosc === 'raz_tydzien') score += 15;
-    else if (form.czestotliwosc === 'kilka_tydzien') score += 25;
-
-    if (!form.strona) score += 0;
-    else if (form.strona.length > 3) score += 15;
-
-    if (form.zrodloKlientow === 'polecenia') score += 5;
-    else if (form.zrodloKlientow === 'po_rowno') score += 15;
-    else if (form.zrodloKlientow === 'internet') score += 25;
-    else score += 3;
-
-    if (form.platformy.includes('TikTok')) score += 3;
-    if (form.strona && form.platformy.length > 0) score += 3;
-    if (form.opisKlienta.length > 30) score += 2;
-
-    return Math.min(score, 100);
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = (reader.result as string).split(',')[1];
-      updateForm('zdjecie', base64);
+    const platformPts: Record<string, number> = {
+      facebook: 5, instagram: 6, tiktok: 6, linkedin: 5, youtube: 5, inne: 3,
     };
-    reader.readAsDataURL(file);
-  };
+    (formData.platformy || []).forEach((p) => { score += platformPts[p] || 0; });
+    score = Math.min(score, 20);
+    const freqPts: Record<string, number> = {
+      rzadko: 2, kilka_miesiac: 8, raz_tydzien: 16, kilka_tydzien: 25,
+    };
+    score += freqPts[formData.czestotliwosc] || 0;
+    if (formData.strona) score += 20;
+    const srcPts: Record<string, number> = {
+      polecenia: 10, po_rowno: 18, internet: 25, nie_wiem: 2,
+    };
+    score += srcPts[formData.zrodloKlientow] || 0;
+    if (formData.celOnline) score += 5;
+    if (formData.problemOnline) score += 5;
+    return Math.min(score, 100);
+  }
 
-  const handleSubmit = async () => {
+  function togglePlatform(val: string) {
+    setFormData((prev) => ({
+      ...prev,
+      platformy: prev.platformy.includes(val)
+        ? prev.platformy.filter((p) => p !== val)
+        : [...prev.platformy, val],
+    }));
+  }
+
+  async function handleSubmit() {
     setLoading(true);
-    const score = calcScore();
+    setError(null);
     try {
-      const response = await fetch('api.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, score }),
-      });
-      const data = await response.json();
-      setReport(data);
-    } catch {
-      setReport({
-        wynik: score,
-        werdykt: 'Wystąpił błąd. Spróbuj ponownie.',
-        co_robisz_dobrze: '',
-        co_traci_klientow: '',
-        plan_dzialania: [],
-        cta: '',
-      });
+      const score = calcScore();
+      const result = await generateAuditReport({ data: { ...formData, score } });
+      if (result?.error) {
+        setError('Błąd generowania raportu. Spróbuj ponownie.');
+      } else {
+        setReport(result);
+      }
+    } catch (e) {
+      setError('Coś poszło nie tak. Spróbuj ponownie.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
+  }
+
+  const canNext = () => {
+    if (step === 1) return formData.nazwa.trim().length > 0;
+    if (step === 2) return formData.platformy.length > 0;
+    if (step === 3) return formData.czestotliwosc !== '';
+    if (step === 4) return true;
+    if (step === 5) return formData.zrodloKlientow !== '';
+    if (step === 6) return formData.problemOnline !== '';
+    if (step === 7) return formData.celOnline !== '';
+    if (step === 8) return formData.opisKlienta.trim().length > 0;
+    if (step === 9) return formData.email.trim().length > 0;
+    return true;
   };
-
-  const inputStyle = {
-    width: '100%',
-    background: '#0D1420',
-    border: '1.5px solid #1A2540',
-    borderRadius: '12px',
-    padding: '14px 18px',
-    color: '#F0F4FF',
-    fontSize: '15px',
-    outline: 'none',
-    fontFamily: 'Inter, sans-serif',
-  } as const;
-
-  const optionStyle = (selected: boolean) => ({
-    width: '100%',
-    background: selected ? 'rgba(0,212,180,0.1)' : '#0D1420',
-    border: selected ? '1.5px solid #00D4B4' : '1.5px solid #1A2540',
-    borderRadius: '12px',
-    padding: '14px 18px',
-    color: selected ? '#00D4B4' : '#F0F4FF',
-    fontSize: '15px',
-    textAlign: 'left' as const,
-    cursor: 'pointer',
-    fontFamily: 'Inter, sans-serif',
-    transition: 'all 0.2s ease',
-  });
-
-  const btnPrimary = {
-    background: '#00D4B4',
-    color: '#080C14',
-    border: 'none',
-    borderRadius: '12px',
-    padding: '14px 32px',
-    fontSize: '15px',
-    fontWeight: 700,
-    cursor: 'pointer',
-    fontFamily: 'Inter, sans-serif',
-    transition: 'all 0.2s ease',
-  } as const;
-
-  const btnSecondary = {
-    background: 'transparent',
-    color: '#8892A4',
-    border: '1.5px solid #1A2540',
-    borderRadius: '12px',
-    padding: '14px 24px',
-    fontSize: '15px',
-    fontWeight: 600,
-    cursor: 'pointer',
-    fontFamily: 'Inter, sans-serif',
-  } as const;
+  const inputCls = "w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-accent/60 focus:bg-white/8 transition-all duration-200 resize-none";
+  const optionCls = (active: boolean) =>
+    `cursor-pointer rounded-xl border px-5 py-4 text-left text-sm font-medium transition-all duration-200 ${
+      active
+        ? 'border-accent bg-accent/15 text-accent'
+        : 'border-white/10 bg-white/5 text-white/80 hover:border-white/25 hover:bg-white/8'
+    }`;
 
   if (report) {
-    const scoreColor = report.wynik >= 70 ? '#4ade80' : report.wynik >= 40 ? '#00D4B4' : '#ff6b35';
+    const score = report.wynik ?? 0;
+    const scoreColor = score >= 70 ? '#00D4B4' : score >= 40 ? '#f59e0b' : '#ef4444';
     return (
-      <div style={{ background: '#0D1420', border: '1.5px solid #1A2540', borderRadius: '20px', padding: '40px', textAlign: 'left' }}>
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ fontSize: '80px', fontWeight: 900, color: scoreColor, lineHeight: 1, fontFamily: 'Inter, sans-serif' }}>{report.wynik}</div>
-          <div style={{ color: '#8892A4', fontSize: '14px', marginBottom: '12px' }}>/ 100 punktów</div>
-          <div style={{ background: '#1A2540', borderRadius: '100px', height: '6px', overflow: 'hidden', marginBottom: '16px' }}>
-            <div style={{ width: `${report.wynik}%`, height: '100%', background: scoreColor, borderRadius: '100px', transition: 'width 1s ease' }} />
+      <div className="space-y-8 text-left">
+        {/* Wynik */}
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
+          <p className="text-sm uppercase tracking-widest text-white/40 mb-4">Twój wynik</p>
+          <div className="flex items-end gap-4 mb-4">
+            <span className="font-display font-bold text-7xl" style={{ color: scoreColor }}>{score}</span>
+            <span className="text-white/40 text-2xl mb-3">/100</span>
           </div>
-          <div style={{ fontSize: '18px', fontWeight: 700, color: '#F0F4FF', fontFamily: 'Syne, sans-serif' }}>{report.werdykt}</div>
+          <p className="text-white/80 text-lg leading-relaxed">{report.werdykt}</p>
+          {/* Progress bar */}
+          <div className="mt-6 h-2 rounded-full bg-white/10 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-1000"
+              style={{ width: `${score}%`, backgroundColor: scoreColor }}
+            />
+          </div>
         </div>
 
+        {/* Co robisz dobrze */}
         {report.co_robisz_dobrze && (
-          <div style={{ background: '#111C2E', border: '1.5px solid #1A2540', borderRadius: '16px', padding: '24px', marginBottom: '16px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#8892A4', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '10px' }}>✅ Co robisz dobrze</div>
-            <p style={{ color: '#F0F4FF', fontSize: '15px', lineHeight: 1.7, fontWeight: 300 }}>{report.co_robisz_dobrze}</p>
+          <div className="rounded-2xl border border-accent/20 bg-accent/5 p-8">
+            <p className="text-sm uppercase tracking-widest text-accent mb-3">Co robisz dobrze</p>
+            <p className="text-white/80 leading-relaxed">{report.co_robisz_dobrze}</p>
           </div>
         )}
 
+        {/* Co traci klientów */}
         {report.co_traci_klientow && (
-          <div style={{ background: '#111C2E', border: '1.5px solid #1A2540', borderRadius: '16px', padding: '24px', marginBottom: '16px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#8892A4', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '10px' }}>⚠️ Co traci dla ciebie klientów</div>
-            {report.co_traci_klientow.split('\n\n').map((p, i) => (
-              <p key={i} style={{ color: '#F0F4FF', fontSize: '15px', lineHeight: 1.7, fontWeight: 300, marginBottom: '10px' }}>{p}</p>
-            ))}
-          </div>
-        )}
-
-        {report.plan_dzialania?.length > 0 && (
-          <div style={{ background: '#111C2E', border: '1.5px solid #1A2540', borderRadius: '16px', padding: '24px', marginBottom: '16px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#8892A4', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '16px' }}>📋 Plan działania</div>
-            {report.plan_dzialania.map((krok, i) => (
-              <div key={i} style={{ marginBottom: '16px' }}>
-                <div style={{ color: '#00D4B4', fontSize: '13px', fontWeight: 700, marginBottom: '4px' }}>Krok {i + 1} — {krok.nazwa}</div>
-                <p style={{ color: '#F0F4FF', fontSize: '15px', lineHeight: 1.7, fontWeight: 300 }}>{krok.opis}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {report.cta && (
-          <div style={{ background: '#00D4B4', borderRadius: '16px', padding: '32px', textAlign: 'center', marginTop: '24px' }}>
-            <p style={{ color: '#080C14', fontSize: '15px', lineHeight: 1.6, marginBottom: '20px', fontWeight: 500 }}>{report.cta}</p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <a href="#kontakt" style={{ background: '#080C14', color: '#00D4B4', borderRadius: '10px', padding: '12px 20px', fontSize: '14px', fontWeight: 700, textDecoration: 'none' }}>Umów konsultację</a>
-              <a href="mailto:kontakt@biesiadastudio.pl" style={{ background: '#080C14', color: '#00D4B4', borderRadius: '10px', padding: '12px 20px', fontSize: '14px', fontWeight: 700, textDecoration: 'none' }}>Napisz na email</a>
-              <a href="https://wa.me/48000000000" style={{ background: '#080C14', color: '#00D4B4', borderRadius: '10px', padding: '12px 20px', fontSize: '14px', fontWeight: 700, textDecoration: 'none' }}>WhatsApp</a>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
+            <p className="text-sm uppercase tracking-widest text-white/40 mb-3">Co traci dla ciebie klientów</p>
+            <div className="space-y-4">
+              {report.co_traci_klientow.split('\n\n').map((para: string, i: number) => (
+                <p key={i} className="text-white/80 leading-relaxed">{para}</p>
+              ))}
             </div>
           </div>
         )}
-      </div>
-    );
-  }
 
-  if (loading) {
-    return (
-      <div style={{ background: '#0D1420', border: '1.5px solid #1A2540', borderRadius: '20px', padding: '60px', textAlign: 'center' }}>
-        <div style={{ width: '40px', height: '40px', border: '3px solid #1A2540', borderTopColor: '#00D4B4', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 20px' }} />
-        <div style={{ color: '#F0F4FF', fontSize: '18px', fontWeight: 700, marginBottom: '8px', fontFamily: 'Syne, sans-serif' }}>Analizujemy twoją firmę...</div>
-        <div style={{ color: '#8892A4', fontSize: '14px' }}>Przygotowujemy spersonalizowany raport</div>
+        {/* Plan działania */}
+        {report.plan_dzialania?.length > 0 && (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
+            <p className="text-sm uppercase tracking-widest text-white/40 mb-6">Plan działania</p>
+            <div className="space-y-6">
+              {report.plan_dzialania.map((krok: any, i: number) => (
+                <div key={i} className="flex gap-5">
+                  <div className="shrink-0 w-8 h-8 rounded-full border border-accent/40 flex items-center justify-center text-accent font-bold text-sm">
+                    {i + 1}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white mb-1">{krok.nazwa}</p>
+                    <p className="text-white/70 leading-relaxed text-sm">{krok.opis}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* CTA */}
+        <div className="rounded-2xl border border-accent/30 bg-accent/8 p-8">
+          <p className="text-white/80 leading-relaxed mb-6">{report.cta}</p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            
+              href="https://calendly.com/biesiadastudio"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 rounded-xl bg-accent px-6 py-3 text-center text-sm font-semibold text-bg-dark transition-all hover:bg-accent/90 hover:scale-[1.02]"
+            >
+              Umów rozmowę →
+            </a>
+            
+              href="mailto:kontakt@biesiadastudio.pl"
+              className="flex-1 rounded-xl border border-accent/40 px-6 py-3 text-center text-sm font-semibold text-accent transition-all hover:bg-accent/10"
+            >
+              Napisz email
+            </a>
+            
+              href="https://wa.me/48TWOJNUMER"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 rounded-xl border border-white/10 px-6 py-3 text-center text-sm font-semibold text-white/70 transition-all hover:border-white/25 hover:text-white"
+            >
+              WhatsApp
+            </a>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ background: '#0D1420', border: '1.5px solid #1A2540', borderRadius: '20px', padding: '40px', textAlign: 'left' }}>
-      <div style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-          <span style={{ color: '#8892A4', fontSize: '13px' }}>Krok {step} z {totalSteps}</span>
-          <span style={{ color: '#00D4B4', fontSize: '13px', fontWeight: 600 }}>{Math.round((step / totalSteps) * 100)}%</span>
+    <div className="space-y-8">
+      {/* Progress */}
+      <div>
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-sm text-white/40">Krok {step} z {totalSteps}</span>
+          <span className="text-sm font-medium text-accent">{progress}%</span>
         </div>
-        <div style={{ background: '#1A2540', borderRadius: '100px', height: '4px', overflow: 'hidden' }}>
-          <div style={{ width: `${(step / totalSteps) * 100}%`, height: '100%', background: '#00D4B4', borderRadius: '100px', transition: 'width 0.4s ease' }} />
+        <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-accent transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
         </div>
       </div>
 
-      {step === 1 && (
-        <div>
-          <div style={{ color: '#8892A4', fontSize: '12px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px' }}>Krok 1 — Twoja firma</div>
-          <h3 style={{ color: '#F0F4FF', fontSize: '22px', fontWeight: 700, marginBottom: '24px', fontFamily: 'Syne, sans-serif' }}>Jak się nazywa twoja firma i czym się zajmujesz?</h3>
-          <textarea value={form.nazwa} onChange={e => updateForm('nazwa', e.target.value)} placeholder="Np. Salon fryzjerski Anna — strzyżenie, koloryzacja, stylizacja..." style={{ ...inputStyle, minHeight: '100px', resize: 'none' }} />
-          <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
-            <button style={btnPrimary} onClick={() => form.nazwa.trim() && setStep(2)} disabled={!form.nazwa.trim()}>Dalej →</button>
-          </div>
-        </div>
-      )}
+      {/* Steps */}
+      <div className="min-h-[280px]">
 
-      {step === 2 && (
-        <div>
-          <div style={{ color: '#8892A4', fontSize: '12px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px' }}>Krok 2 — Social Media</div>
-          <h3 style={{ color: '#F0F4FF', fontSize: '22px', fontWeight: 700, marginBottom: '24px', fontFamily: 'Syne, sans-serif' }}>Na jakich platformach jesteś aktywny?</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {['Instagram', 'Facebook', 'TikTok', 'LinkedIn', 'YouTube', 'Inne'].map(p => (
-              <button key={p} style={optionStyle(form.platformy.includes(p))} onClick={() => togglePlatform(p)}>{p}</button>
-            ))}
+        {step === 1 && (
+          <div className="space-y-4">
+            <p className="text-xs uppercase tracking-widest text-accent/70">Krok 1 — Twoja firma</p>
+            <h3 className="font-display font-bold text-2xl text-white">Jak się nazywa twoja firma i czym się zajmujesz?</h3>
+            <textarea
+              rows={4}
+              placeholder="Np. Salon fryzjerski Anna — strzyżenie, koloryzacja, stylizacja..."
+              className={inputCls}
+              value={formData.nazwa}
+              onChange={(e) => setFormData({ ...formData, nazwa: e.target.value })}
+            />
           </div>
-          <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'space-between' }}>
-            <button style={btnSecondary} onClick={() => setStep(1)}>← Wróć</button>
-            <button style={btnPrimary} onClick={() => setStep(3)}>Dalej →</button>
-          </div>
-        </div>
-      )}
+        )}
 
-      {step === 3 && (
-        <div>
-          <div style={{ color: '#8892A4', fontSize: '12px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px' }}>Krok 3 — Regularność</div>
-          <h3 style={{ color: '#F0F4FF', fontSize: '22px', fontWeight: 700, marginBottom: '24px', fontFamily: 'Syne, sans-serif' }}>Jak często publikujesz treści?</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {[
-              { val: 'kilka_tydzien', label: 'Kilka razy w tygodniu' },
-              { val: 'raz_tydzien', label: 'Raz w tygodniu' },
-              { val: 'kilka_miesiac', label: 'Kilka razy w miesiącu' },
-              { val: 'rzadko', label: 'Rzadko lub wcale' },
-            ].map(o => (
-              <button key={o.val} style={optionStyle(form.czestotliwosc === o.val)} onClick={() => updateForm('czestotliwosc', o.val)}>{o.label}</button>
-            ))}
-          </div>
-          <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'space-between' }}>
-            <button style={btnSecondary} onClick={() => setStep(2)}>← Wróć</button>
-            <button style={btnPrimary} onClick={() => form.czestotliwosc && setStep(4)} disabled={!form.czestotliwosc}>Dalej →</button>
-          </div>
-        </div>
-      )}
-
-      {step === 4 && (
-        <div>
-          <div style={{ color: '#8892A4', fontSize: '12px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px' }}>Krok 4 — Strona internetowa</div>
-          <h3 style={{ color: '#F0F4FF', fontSize: '22px', fontWeight: 700, marginBottom: '24px', fontFamily: 'Syne, sans-serif' }}>Czy masz stronę internetową?</h3>
-          <input value={form.strona} onChange={e => updateForm('strona', e.target.value)} placeholder="Wklej link do strony (opcjonalnie)" style={{ ...inputStyle, marginBottom: '16px' }} />
-          <div style={{ border: '1.5px dashed #1A2540', borderRadius: '12px', padding: '20px', textAlign: 'center', cursor: 'pointer' }} onClick={() => document.getElementById('zdjecie-input')?.click()}>
-            <input id="zdjecie-input" type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
-            <div style={{ color: form.zdjecie ? '#00D4B4' : '#8892A4', fontSize: '14px' }}>
-              {form.zdjecie ? '✅ Zdjęcie dodane' : '📷 Dodaj zdjęcie profilu lub posta (opcjonalnie)'}
+        {step === 2 && (
+          <div className="space-y-4">
+            <p className="text-xs uppercase tracking-widest text-accent/70">Krok 2 — Social media</p>
+            <h3 className="font-display font-bold text-2xl text-white">Na których platformach jesteś aktywny?</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[
+                { val: 'facebook', label: 'Facebook' },
+                { val: 'instagram', label: 'Instagram' },
+                { val: 'tiktok', label: 'TikTok' },
+                { val: 'linkedin', label: 'LinkedIn' },
+                { val: 'youtube', label: 'YouTube' },
+                { val: 'inne', label: 'Inne' },
+              ].map(({ val, label }) => (
+                <button key={val} onClick={() => togglePlatform(val)} className={optionCls(formData.platformy.includes(val))}>
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
-          <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'space-between' }}>
-            <button style={btnSecondary} onClick={() => setStep(3)}>← Wróć</button>
-            <button style={btnPrimary} onClick={() => setStep(5)}>Dalej →</button>
+        )}
+ {step === 3 && (
+          <div className="space-y-4">
+            <p className="text-xs uppercase tracking-widest text-accent/70">Krok 3 — Aktywność</p>
+            <h3 className="font-display font-bold text-2xl text-white">Jak często publikujesz treści?</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { val: 'rzadko', label: 'Rzadko lub wcale' },
+                { val: 'kilka_miesiac', label: 'Kilka razy w miesiącu' },
+                { val: 'raz_tydzien', label: 'Raz w tygodniu' },
+                { val: 'kilka_tydzien', label: 'Kilka razy w tygodniu' },
+              ].map(({ val, label }) => (
+                <button key={val} onClick={() => setFormData({ ...formData, czestotliwosc: val })} className={optionCls(formData.czestotliwosc === val)}>
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {step === 5 && (
-        <div>
-          <div style={{ color: '#8892A4', fontSize: '12px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px' }}>Krok 5 — Klienci</div>
-          <h3 style={{ color: '#F0F4FF', fontSize: '22px', fontWeight: 700, marginBottom: '24px', fontFamily: 'Syne, sans-serif' }}>Skąd głównie pozyskujesz klientów?</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {[
-              { val: 'polecenia', label: 'Głównie z polecień od znajomych i obecnych klientów' },
-              { val: 'po_rowno', label: 'Po równo — i z internetu i z polecień' },
-              { val: 'internet', label: 'Głównie z internetu — social media lub strona mi sprzedają' },
-              { val: 'nie_wiem', label: 'Szczerze nie wiem skąd przychodzą moi klienci' },
-            ].map(o => (
-              <button key={o.val} style={optionStyle(form.zrodloKlientow === o.val)} onClick={() => updateForm('zrodloKlientow', o.val)}>{o.label}</button>
-            ))}
+        {step === 4 && (
+          <div className="space-y-4">
+            <p className="text-xs uppercase tracking-widest text-accent/70">Krok 4 — Strona internetowa</p>
+            <h3 className="font-display font-bold text-2xl text-white">Czy masz stronę internetową?</h3>
+            <input
+              type="url"
+              placeholder="https://twojastrona.pl (zostaw puste jeśli nie masz)"
+              className={inputCls}
+              value={formData.strona}
+              onChange={(e) => setFormData({ ...formData, strona: e.target.value })}
+            />
+            <p className="text-white/30 text-sm">Pole opcjonalne — wpisz link jeśli masz stronę.</p>
           </div>
-          <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'space-between' }}>
-            <button style={btnSecondary} onClick={() => setStep(4)}>← Wróć</button>
-            <button style={btnPrimary} onClick={() => form.zrodloKlientow && setStep(6)} disabled={!form.zrodloKlientow}>Dalej →</button>
-          </div>
-        </div>
-      )}
+        )}
 
-      {step === 6 && (
-        <div>
-          <div style={{ color: '#8892A4', fontSize: '12px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px' }}>Krok 6 — Problem</div>
-          <h3 style={{ color: '#F0F4FF', fontSize: '22px', fontWeight: 700, marginBottom: '24px', fontFamily: 'Syne, sans-serif' }}>Co najbardziej przeszkadza ci w pozyskiwaniu klientów przez internet?</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {[
-              { val: 'czas', label: 'Brak czasu — prowadzenie firmy zajmuje mi cały dzień' },
-              { val: 'pomysly', label: 'Nie wiem co publikować żeby przyciągać klientów a nie tylko lajki' },
-              { val: 'efekty', label: 'Publikuję regularnie ale to nie przekłada się na zapytania od klientów' },
-            ].map(o => (
-              <button key={o.val} style={optionStyle(form.problemOnline === o.val)} onClick={() => updateForm('problemOnline', o.val)}>{o.label}</button>
-            ))}
-            <input value={form.problemOnlineCustom} onChange={e => { updateForm('problemOnlineCustom', e.target.value); updateForm('problemOnline', 'custom'); }} placeholder="Opisz swoimi słowami..." style={inputStyle} />
+        {step === 5 && (
+          <div className="space-y-4">
+            <p className="text-xs uppercase tracking-widest text-accent/70">Krok 5 — Źródło klientów</p>
+            <h3 className="font-display font-bold text-2xl text-white">Skąd głównie pozyskujesz klientów?</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { val: 'polecenia', label: 'Głównie z polecień' },
+                { val: 'po_rowno', label: 'Po równo — internet i polecenia' },
+                { val: 'internet', label: 'Głównie z internetu' },
+                { val: 'nie_wiem', label: 'Szczerze — nie wiem' },
+              ].map(({ val, label }) => (
+                <button key={val} onClick={() => setFormData({ ...formData, zrodloKlientow: val })} className={optionCls(formData.zrodloKlientow === val)}>
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'space-between' }}>
-            <button style={btnSecondary} onClick={() => setStep(5)}>← Wróć</button>
-            <button style={btnPrimary} onClick={() => (form.problemOnline || form.problemOnlineCustom) && setStep(7)} disabled={!form.problemOnline && !form.problemOnlineCustom}>Dalej →</button>
-          </div>
-        </div>
-      )}
+        )}
 
-      {step === 7 && (
-        <div>
-          <div style={{ color: '#8892A4', fontSize: '12px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px' }}>Krok 7 — Cel</div>
-          <h3 style={{ color: '#F0F4FF', fontSize: '22px', fontWeight: 700, marginBottom: '24px', fontFamily: 'Syne, sans-serif' }}>Co chcesz poprawić w swojej obecności online?</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {[
-              { val: 'social_klienci', label: 'Social media które przynoszą klientów' },
-              { val: 'strona', label: 'Profesjonalna strona która sprzedaje' },
-              { val: 'content', label: 'Wiedzieć co publikować żeby to działało' },
-              { val: 'wizerunek', label: 'Profesjonalny i spójny wygląd w internecie' },
-            ].map(o => (
-              <button key={o.val} style={optionStyle(form.celOnline === o.val)} onClick={() => updateForm('celOnline', o.val)}>{o.label}</button>
-            ))}
-            <input value={form.celOnlineCustom} onChange={e => { updateForm('celOnlineCustom', e.target.value); updateForm('celOnline', 'custom'); }} placeholder="Opisz swoimi słowami..." style={inputStyle} />
+        {step === 6 && (
+          <div className="space-y-4">
+            <p className="text-xs uppercase tracking-widest text-accent/70">Krok 6 — Główny problem</p>
+            <h3 className="font-display font-bold text-2xl text-white">Co najbardziej przeszkadza ci w internecie?</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { val: 'czas', label: 'Brak czasu na regularność' },
+                { val: 'pomysly', label: 'Nie wiem co publikować' },
+                { val: 'efekty', label: 'Publikuję, ale bez efektów' },
+                { val: 'custom', label: 'Coś innego' },
+              ].map(({ val, label }) => (
+                <button key={val} onClick={() => setFormData({ ...formData, problemOnline: val })} className={optionCls(formData.problemOnline === val)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {formData.problemOnline === 'custom' && (
+              <input
+                type="text"
+                placeholder="Opisz swój problem..."
+                className={inputCls}
+                value={formData.problemOnlineCustom}
+                onChange={(e) => setFormData({ ...formData, problemOnlineCustom: e.target.value })}
+              />
+            )}
           </div>
-          <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'space-between' }}>
-            <button style={btnSecondary} onClick={() => setStep(6)}>← Wróć</button>
-            <button style={btnPrimary} onClick={() => (form.celOnline || form.celOnlineCustom) && setStep(8)} disabled={!form.celOnline && !form.celOnlineCustom}>Dalej →</button>
-          </div>
-        </div>
-      )}
+        )}
 
-      {step === 8 && (
-        <div>
-          <div style={{ color: '#8892A4', fontSize: '12px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px' }}>Krok 8 — Twój klient</div>
-          <h3 style={{ color: '#F0F4FF', fontSize: '22px', fontWeight: 700, marginBottom: '12px', fontFamily: 'Syne, sans-serif' }}>Opisz swojego typowego klienta</h3>
-          <p style={{ color: '#8892A4', fontSize: '14px', marginBottom: '20px' }}>Kto to jest i dlaczego kupuje u ciebie? Czy próbowałeś już coś robić żeby poprawić swoją obecność online i co z tego wyszło?</p>
-          <textarea value={form.opisKlienta} onChange={e => updateForm('opisKlienta', e.target.value)} placeholder="Np. Moi klienci to głównie kobiety 25-45 lat które szukają salonu w okolicy. Próbowałem prowadzić Instagram ale nie miałem czasu na regularne posty..." style={{ ...inputStyle, minHeight: '140px', resize: 'none' }} />
-          <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'space-between' }}>
-            <button style={btnSecondary} onClick={() => setStep(7)}>← Wróć</button>
-            <button style={btnPrimary} onClick={() => form.opisKlienta.trim() && setStep(9)} disabled={!form.opisKlienta.trim()}>Dalej →</button>
+        {step === 7 && (
+          <div className="space-y-4">
+            <p className="text-xs uppercase tracking-widest text-accent/70">Krok 7 — Cel</p>
+            <h3 className="font-display font-bold text-2xl text-white">Co chcesz poprawić w pierwszej kolejności?</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { val: 'social_klienci', label: 'Social media które przynoszą klientów' },
+                { val: 'strona', label: 'Profesjonalna strona która sprzedaje' },
+                { val: 'content', label: 'Wiedzieć co publikować' },
+                { val: 'wizerunek', label: 'Profesjonalny wygląd w sieci' },
+                { val: 'custom', label: 'Coś innego' },
+              ].map(({ val, label }) => (
+                <button key={val} onClick={() => setFormData({ ...formData, celOnline: val })} className={optionCls(formData.celOnline === val)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {formData.celOnline === 'custom' && (
+              <input
+                type="text"
+                placeholder="Opisz swój cel..."
+                className={inputCls}
+                value={formData.celOnlineCustom}
+                onChange={(e) => setFormData({ ...formData, celOnlineCustom: e.target.value })}
+              />
+            )}
           </div>
-        </div>
-      )}
+        )}
 
-      {step === 9 && (
-        <div>
-          <div style={{ color: '#8892A4', fontSize: '12px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px' }}>Krok 9 — Twój raport</div>
-          <h3 style={{ color: '#F0F4FF', fontSize: '22px', fontWeight: 700, marginBottom: '12px', fontFamily: 'Syne, sans-serif' }}>Na jaki email wysłać ci raport?</h3>
-          <p style={{ color: '#8892A4', fontSize: '14px', marginBottom: '20px' }}>Raport pojawi się od razu na stronie. Email zostawiamy tylko do kontaktu.</p>
-          <input type="email" value={form.email} onChange={e => updateForm('email', e.target.value)} placeholder="twoj@email.pl" style={{ ...inputStyle, marginBottom: '24px' }} />
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'space-between' }}>
-            <button style={btnSecondary} onClick={() => setStep(8)}>← Wróć</button>
-            <button
-              style={{ ...btnPrimary, opacity: form.email.includes('@') ? 1 : 0.5 }}
-              onClick={() => form.email.includes('@') && handleSubmit()}
-              disabled={!form.email.includes('@')}
-            >
-              Wygeneruj mój raport →
-            </button>
+        {step === 8 && (
+          <div className="space-y-4">
+            <p className="text-xs uppercase tracking-widest text-accent/70">Krok 8 — Twój klient</p>
+            <h3 className="font-display font-bold text-2xl text-white">Kim jest twój typowy klient i co już próbowałeś?</h3>
+            <textarea
+              rows={5}
+              placeholder="Np. Kobiety 25-45 lat zainteresowane pielęgnacją. Próbowałem postować na Instagramie ale rzuciłem po miesiącu..."
+              className={inputCls}
+              value={formData.opisKlienta}
+              onChange={(e) => setFormData({ ...formData, opisKlienta: e.target.value })}
+            />
           </div>
-        </div>
+        )}
+
+        {step === 9 && (
+          <div className="space-y-4">
+            <p className="text-xs uppercase tracking-widest text-accent/70">Krok 9 — Raport</p>
+            <h3 className="font-display font-bold text-2xl text-white">Na jaki email wysłać raport?</h3>
+            <input
+              type="email"
+              placeholder="twoj@email.pl"
+              className={inputCls}
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
+            <p className="text-white/30 text-sm">Raport pojawi się też od razu na ekranie.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Nawigacja */}
+      <div className="flex justify-between items-center pt-4">
+        {step > 1 ? (
+          <button
+            onClick={() => setStep(step - 1)}
+            className="rounded-xl border border-white/10 px-5 py-2.5 text-sm text-white/60 hover:border-white/25 hover:text-white transition-all"
+          >
+            ← Wstecz
+          </button>
+        ) : (
+          <div />
+        )}
+
+        {step < totalSteps ? (
+          <button
+            onClick={() => setStep(step + 1)}
+            disabled={!canNext()}
+            className="rounded-xl bg-accent px-7 py-2.5 text-sm font-semibold text-bg-dark transition-all hover:bg-accent/90 hover:scale-[1.02] disabled:opacity-30 disabled:cursor-not-allowed disabled:scale-100"
+          >
+            Dalej →
+          </button>
+        ) : (
+          <button
+            onClick={handleSubmit}
+            disabled={!canNext() || loading}
+            className="rounded-xl bg-accent px-7 py-2.5 text-sm font-semibold text-bg-dark transition-all hover:bg-accent/90 hover:scale-[1.02] disabled:opacity-30 disabled:cursor-not-allowed disabled:scale-100"
+          >
+            {loading ? 'Generuję raport...' : 'Wygeneruj raport →'}
+          </button>
+        )}
+      </div>
+
+      {error && (
+        <p className="text-red-400 text-sm text-center">{error}</p>
       )}
     </div>
   );
@@ -743,8 +748,11 @@ function Tool() {
           Odpowiedz na kilka pytań i otrzymaj bezpłatny raport.
         </p>
 
-        <div className="mt-14">
-          <AuditForm />
+        <div className="mt-14 relative rounded-2xl border border-accent/40 bg-bg-card p-8 sm:p-12 shadow-[0_0_60px_-20px_rgba(0,212,180,0.4)] text-left">
+          <div className="absolute inset-0 rounded-2xl bg-accent-subtle pointer-events-none" />
+          <div className="relative">
+            <AuditForm />
+          </div>
         </div>
       </div>
     </section>
