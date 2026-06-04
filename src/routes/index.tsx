@@ -484,7 +484,7 @@ const [step, setStep] = useState(1);
             </a>
             
             <a
-              href="mailto:dawidbiesiadastudio@gmail.com"
+              href="#" onClick={(e) => { e.preventDefault(); alert('dawidbiesiadastudio@gmail.com'); }}
               className="w-full rounded-xl border border-accent/40 px-6 py-3 text-center text-sm font-semibold text-accent transition-all hover:bg-accent/10"
             >
               Napisz email
