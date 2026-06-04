@@ -439,7 +439,7 @@ const [step, setStep] = useState(1);
         )}
 
         {/* Co traci klientów */}
-        {report.co_traci_klientow && (
+        {(report.co_traci_klientow || report.co_traca_klientow) && (
           <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
             <p className="text-sm uppercase tracking-widest text-white/40 mb-3">Co traci dla ciebie klientów</p>
             <div className="space-y-4">
@@ -475,7 +475,7 @@ const [step, setStep] = useState(1);
           <p className="text-white/80 leading-relaxed mb-6">{report.cta}</p>
           <div className="flex flex-col sm:flex-row gap-3">
             <a
-             href="https://calendly.com/biesiadastudio"
+             href="https://wa.me/48531629503"
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 rounded-xl bg-accent px-6 py-3 text-center text-sm font-semibold text-bg-dark transition-all hover:bg-accent/90 hover:scale-[1.02]"
@@ -484,7 +484,7 @@ const [step, setStep] = useState(1);
             </a>
             
             <a
-              href="mailto:kontakt@biesiadastudio.pl"
+              href="mailto:dawidbiesiadastudio@gmail.com"
               className="flex-1 rounded-xl border border-accent/40 px-6 py-3 text-center text-sm font-semibold text-accent transition-all hover:bg-accent/10"
             >
               Napisz email
