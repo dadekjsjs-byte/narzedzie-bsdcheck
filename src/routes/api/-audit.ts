@@ -102,7 +102,7 @@ const clean = jsonMatch ? jsonMatch[0] : stripped
       try {
         const { appendFile } = await import('fs/promises')
         const line = `${new Date().toISOString()},${data.email},${data.nazwa},${data.score}\n`
-        await appendFile('/home/u694760561/domains/bsdcheck.pl/leads.csv', line, 'utf8')
+        await appendFile('/tmp/leads.csv', line, 'utf8')
       } catch (fileError) {
         console.error('File error:', fileError)
       }
