@@ -919,7 +919,7 @@ function Footer() {
         </div>
         <div className="mt-10 pt-6 border-t border-border-card flex flex-col sm:flex-row justify-between gap-3 text-xs text-text-muted">
           <span>© 2026 Biesiada Studio</span>
-          <a href="#" className="hover:text-accent transition-colors">
+          <a href="/polityka" className="hover:text-accent transition-colors">
             Polityka prywatności
           </a>
         </div>
