@@ -337,7 +337,7 @@ const [step, setStep] = useState(1);
     email: '',
   });
 
-  const totalSteps = 9;
+  const totalSteps = 8;
   const progress = Math.round((step / totalSteps) * 100);
 
   function calcScore(): number {
@@ -397,7 +397,6 @@ const [step, setStep] = useState(1);
     if (step === 6) return formData.problemOnline !== '';
     if (step === 7) return formData.celOnline !== '';
     if (step === 8) return formData.opisKlienta.trim().length > 0;
-    if (step === 9) return formData.email.trim().length > 0;
     return true;
   };
   const inputCls = "w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-accent/60 focus:bg-white/8 transition-all duration-200 resize-none";
@@ -676,20 +675,6 @@ const [step, setStep] = useState(1);
               className={inputCls}
               value={formData.opisKlienta}
               onChange={(e) => setFormData({ ...formData, opisKlienta: e.target.value })}
-            />
-          </div>
-        )}
-
-        {step === 9 && (
-          <div className="space-y-4">
-            <p className="text-xs uppercase tracking-widest text-accent/70">Krok 9 — Raport</p>
-            <h3 className="font-display font-bold text-2xl text-white">Na jaki email wysłać raport?</h3>
-            <input
-              type="email"
-              placeholder="twoj@email.pl"
-              className={inputCls}
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             />
           </div>
         )}
