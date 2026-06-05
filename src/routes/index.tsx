@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Eye, AlertTriangle, Map, Instagram, Music2, ArrowRight } from "lucide-react";
+import { Eye, AlertTriangle, Map, MessageCircle, Mail, ArrowRight } from "lucide-react";
 import { generateAuditReport } from './api/-audit'
 
 export const Route = createFileRoute("/")({
@@ -899,23 +899,26 @@ function Footer() {
           </p>
           <div className="flex gap-3 md:justify-end">
             <a
-              href="#"
-              aria-label="Instagram"
+              href="https://wa.me/48531629503"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="WhatsApp"
               className="w-10 h-10 rounded-md border border-border-card flex items-center justify-center text-text-secondary hover:text-accent hover:border-border-active transition-colors"
             >
-              <Instagram className="w-4 h-4" />
+           <MessageCircle className="w-4 h-4" />
             </a>
             <a
-              href="#"
-              aria-label="TikTok"
+             href="#"
+              onClick={(e: React.MouseEvent) => { e.preventDefault(); alert('dawidbiesiadastudio@gmail.com'); }}
+              aria-label="Email"
               className="w-10 h-10 rounded-md border border-border-card flex items-center justify-center text-text-secondary hover:text-accent hover:border-border-active transition-colors"
             >
-              <Music2 className="w-4 h-4" />
+           <Mail className="w-4 h-4" />
             </a>
           </div>
         </div>
         <div className="mt-10 pt-6 border-t border-border-card flex flex-col sm:flex-row justify-between gap-3 text-xs text-text-muted">
-          <span>© 2025 Biesiada Studio</span>
+          <span>© 2026 Biesiada Studio</span>
           <a href="#" className="hover:text-accent transition-colors">
             Polityka prywatności
           </a>
