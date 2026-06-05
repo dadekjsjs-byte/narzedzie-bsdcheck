@@ -691,7 +691,6 @@ const [step, setStep] = useState(1);
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             />
-            <p className="text-white/30 text-sm">Raport pojawi się też od razu na ekranie.</p>
           </div>
         )}
       </div>
