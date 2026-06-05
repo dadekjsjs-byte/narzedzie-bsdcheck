@@ -886,7 +886,7 @@ function About() {
   );
 }
 
-function Footer() {
+function Footer({ onPolityka }: { onPolityka: () => void }) {
   return (
     <footer id="kontakt" className="border-t border-border-card bg-bg/60 backdrop-blur-sm">
       <div className="mx-auto max-w-7xl px-6 py-12">
@@ -919,7 +919,7 @@ function Footer() {
         </div>
         <div className="mt-10 pt-6 border-t border-border-card flex flex-col sm:flex-row justify-between gap-3 text-xs text-text-muted">
           <span>© 2026 Biesiada Studio</span>
-          <a href="/polityka" className="hover:text-accent transition-colors">
+          <a href="#" onClick={(e: any) => { e.preventDefault(); onPolityka(); }} className="hover:text-accent transition-colors">
             Polityka prywatności
           </a>
         </div>
@@ -929,6 +929,7 @@ function Footer() {
 }
 
 function Index() {
+  const [showPolityka, setShowPolityka] = useState(false);
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -939,7 +940,41 @@ function Index() {
         <Tool />
         <About />
       </main>
-      <Footer />
+      <Footer onPolityka={() => setShowPolityka(true)} />
+      {showPolityka && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={() => setShowPolityka(false)}>
+          <div className="bg-[#0d1b2e] border border-white/10 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto p-8" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="font-display font-bold text-2xl text-white">Polityka prywatności</h2>
+              <button onClick={() => setShowPolityka(false)} className="text-white/40 hover:text-white text-2xl">✕</button>
+            </div>
+            <div className="space-y-6 text-white/70 text-sm leading-relaxed">
+              <div>
+                <h3 className="text-white font-semibold mb-2">Czym jest BSDCheck?</h3>
+                <p>BSDCheck to bezpłatne narzędzie online stworzone przez Biesiada Studio, które pomaga firmom ocenić jakość swojej obecności w internecie — w szczególności aktywność w mediach społecznościowych i skuteczność pozyskiwania klientów online.</p>
+              </div>
+              <div>
+                <h3 className="text-white font-semibold mb-2">Jakie dane zbieramy?</h3>
+                <p>BSDCheck nie zbiera, nie przechowuje ani nie przetwarza żadnych danych osobowych. Informacje wpisane w formularzu są wysyłane wyłącznie do API firmy Anthropic w celu wygenerowania raportu i nie są przez nas zapisywane. Po wygenerowaniu raportu wszystkie dane są usuwane.</p>
+              </div>
+              <div>
+                <h3 className="text-white font-semibold mb-2">Technologia AI</h3>
+                <p>Raport jest generowany przez model językowy Claude (Anthropic). Dane wpisane w formularzu są przekazywane do API Anthropic zgodnie z ich polityką prywatności dostępną na stronie anthropic.com.</p>
+              </div>
+              <div>
+                <h3 className="text-white font-semibold mb-2">Pliki cookie</h3>
+                <p>Strona może używać technicznych plików cookie niezbędnych do jej prawidłowego działania. Nie używamy plików cookie do śledzenia ani celów reklamowych.</p>
+              </div>
+              <div>
+                <h3 className="text-white font-semibold mb-2">Kontakt</h3>
+                <p>Biesiada Studio</p>
+                <p className="mt-1">Email: dawidbiesiadastudio@gmail.com</p>
+                <p className="mt-1">WhatsApp: +48 531 629 503</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
